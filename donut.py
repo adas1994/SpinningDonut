@@ -57,11 +57,11 @@ screen_height = Height // pixel_height
 screen_size = screen_width * screen_height
 #####################################################
 AngleOfRotation_AroundAxis = {}
-AngleOfRotation_AroundAxis["X"] = Pi
-AngleOfRotation_AroundAxis["Z"] = 0.0 #Pi
+AngleOfRotation_AroundAxis["X"] = 0.0 #TwoPi
+AngleOfRotation_AroundAxis["Z"] = 0.0 #TwoPi
 DeltaAngleOfRotation_AroundAxis = {}
 DeltaAngleOfRotation_AroundAxis["X"] = DeltaAngleX
-DeltaAngleOfRotation_AroundAxis["Z"] = DeltaAngleX
+DeltaAngleOfRotation_AroundAxis["Z"] = DeltaAngleZ
 
 theta_spacing = 0.10
 phi_spacing = 0.03
@@ -169,7 +169,8 @@ while running:
             #if ooz > zbuffer[position]:
             zbuffer[position] = ooz  # larger ooz means the pixel is closer to the viewer than what's already plotted
             luminance_index = int(L * 8)  # we multiply by 8 to get luminance_index range 0..11 (8 * sqrt(2) = 11)
-            output[position] = chars[luminance_index]# if luminance_index > 0 else 0]
+            print(L, luminance_index)
+            output[position] = chars[luminance_index if luminance_index < 11 else 0]
 
     for i in range(screen_height):
         y_pixel += pixel_height
