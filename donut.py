@@ -9,24 +9,28 @@ from collections import deque as DQ
 # Base Code was taken from https://github.com/codegiovanni/Donut_2.0/blob/main/donut.py
 
 parser = AP()
-parser.add_argument("--DeltaAngleX", default=0.035, dest="DeltaAngleX", type=float)
-parser.add_argument("--DeltaAngleZ", default=0.035, dest='DeltaAngleZ', type=float)
-parser.add_argument("--Width", default=800, dest="Width", type=int)
-parser.add_argument("--Height", default=800, dest="Height", type=int)
-parser.add_argument("--R1", default=10, dest="R1", type=int)
-parser.add_argument("--R2", default=20, dest="R2", type=int)
-parser.add_argument("--K2", default=200, dest="K2", type=int)
-parser.add_argument("--PixelW", default=20, dest="PixelW", type=int)
-parser.add_argument("--PixelH", default=20, dest="PixelH", type=int)
-parser.add_argument("--CharOption", default=0, dest="CharOption", type=int)
-parser.add_argument("--shiftThetaRangeBy", default=0, dest="ShiftThetaRangeBy", type=int)
-parser.add_argument("--shiftPhiRangeBy", default=0, dest="ShiftPhiRangeBy", type=int)
-parser.add_argument("--shiftThetaRange", default=False, type=bool)
-parser.add_argument("--shiftPhiRange", default=False, type=bool)
+parser.add_argument("--DeltaAngleX",    default=0.035,dest="DeltaAngleX",    type=float)
+parser.add_argument("--DeltaAngleZ",    default=0.035,dest='DeltaAngleZ',    type=float)
+parser.add_argument("--StartingAngleX", default=0.035,dest="StartingAngleX", type=float)
+parser.add_argument("--StartingAngleZ", default=0.035,dest="StartingAngleZ", type=float)
+parser.add_argument("--Width",          default=800,  dest="Width",          type=int)
+parser.add_argument("--Height",         default=800,  dest="Height",         type=int)
+parser.add_argument("--R1",             default=10,   dest="R1",             type=int)
+parser.add_argument("--R2",             default=20,   dest="R2",             type=int)
+parser.add_argument("--K2",             default=200,  dest="K2",             type=int)
+parser.add_argument("--PixelW",         default=20,   dest="PixelW",         type=int)
+parser.add_argument("--PixelH",         default=20,   dest="PixelH",         type=int)
+parser.add_argument("--CharOption",     default=0,    dest="CharOption",     type=int)
+parser.add_argument("--shiftThetaRangeBy", default=0, dest="ShiftThetaRangeBy",type=int)
+parser.add_argument("--shiftPhiRangeBy",   default=0, dest="ShiftPhiRangeBy", type=int)
+parser.add_argument("--shiftThetaRange",   default=False, type=bool)
+parser.add_argument("--shiftPhiRange",     default=False, type=bool)
 args= parser.parse_args()
 
 DeltaAngleX = args.DeltaAngleX
 DeltaAngleZ = args.DeltaAngleZ
+StartingAngleX = args.StartingAngleX
+StartingAngleZ = args.StartingAngleZ
 Width = args.Width
 Height = args.Height
 R1 = args.R1
@@ -57,8 +61,8 @@ screen_height = Height // pixel_height
 screen_size = screen_width * screen_height
 #####################################################
 AngleOfRotation_AroundAxis = {}
-AngleOfRotation_AroundAxis["X"] = 0.0 #TwoPi
-AngleOfRotation_AroundAxis["Z"] = 0.0 #TwoPi
+AngleOfRotation_AroundAxis["X"] = StartingAngleX #Pi/2 #TwoPi
+AngleOfRotation_AroundAxis["Z"] = StartingAngleZ #0.0 #Pi/2
 DeltaAngleOfRotation_AroundAxis = {}
 DeltaAngleOfRotation_AroundAxis["X"] = DeltaAngleX
 DeltaAngleOfRotation_AroundAxis["Z"] = DeltaAngleZ
@@ -169,8 +173,10 @@ while running:
             #if ooz > zbuffer[position]:
             zbuffer[position] = ooz  # larger ooz means the pixel is closer to the viewer than what's already plotted
             luminance_index = int(L * 8)  # we multiply by 8 to get luminance_index range 0..11 (8 * sqrt(2) = 11)
-            print(L, luminance_index)
-            output[position] = chars[luminance_index if luminance_index < 11 else 0]
+            #print("PrintLumi ", L, luminance_index)
+            lenchars = len(chars)
+            lumi_idx = luminance_index % lenchars
+            output[position] = chars[lumi_idx]
 
     for i in range(screen_height):
         y_pixel += pixel_height
