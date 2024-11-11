@@ -137,8 +137,13 @@ while running:
         PhiRange = list(PhiRange)
         #print("NewPhiRange : ")
         #print(PhiRange)
-    # Now loop over X and Y Points on a Plane
-    
+    # Now loop over X and Y Points on a Plane for a specific angle of rotation
+    # along X axis and Y axis. We change/increment these angles at the end of the two
+    # nested loop of theta and phi
+    X = AngleOfRotation_AroundAxis["X"]
+    Z = AngleOfRotation_AroundAxis["Z"]
+    sinX, cosX = sin(X), cos(X)
+    sinZ, cosZ = sin(Z), cos(Z)
     for theta in ThetaRange:  # theta goes around the cross-sectional circle of a torus, from 0 to 2pi
         costheta = cos(theta)
         sintheta = sin(theta)
@@ -149,11 +154,6 @@ while running:
             cosphi = cos(phi)
             sinphi = sin(phi)
 
-            X = AngleOfRotation_AroundAxis["X"]
-            Z = AngleOfRotation_AroundAxis["Z"]
-            sinX, cosX = sin(X), cos(X)
-            sinZ, cosZ = sin(Z), cos(Z)
-            
             # 3D (x, y, z) coordinates after rotation
             x = circlex * (cosZ * cosphi + sinX * sinZ * sinphi) - circley * cosX * sinZ
             y = circlex * (sinZ * cosphi - sinX * cosZ * sinphi) + circley * cosX * cosZ
