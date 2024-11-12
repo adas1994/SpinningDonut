@@ -5,7 +5,9 @@ import pygame
 import colorsys
 from argparse import ArgumentParser as AP
 from collections import deque as DQ
-
+from collections import defaultdict
+import numpy as np
+import myfuncs 
 # Base Code was taken from https://github.com/codegiovanni/Donut_2.0/blob/main/donut.py
 
 parser = AP()
@@ -79,29 +81,18 @@ charOptions[0] = ".,-~:;=!*#$@"
 charOptions[1] = ". . . . . . . ."
 charOptions[2] = ".. .. .. .. .. "
 charOptions[3] = "... ... ... ..."
-
+charOptions[4] = "..............."
 
 chars = charOptions[CharOption]
 
 K1 = screen_height * K2 * 3 / (8 * (R1 + R2))
 
 pygame.init()
-
+font = pygame.font.SysFont('Arial', 20, bold=True)
 screen = pygame.display.set_mode(RES)
 clock = pygame.time.Clock()
-font = pygame.font.SysFont('Arial', 20, bold=True)
 
-
-def hsv2rgb(h, s, v):
-    return tuple(round(i * 255) for i in colorsys.hsv_to_rgb(h, s, v))
-
-
-def text_display(char, x, y):
-    text = font.render(str(char), True, hsv2rgb(hue, 1, 1))
-    text_rect = text.get_rect(center=(x, y))
-    screen.blit(text, text_rect)
-
-
+    
 k = 0
 
 paused = False
@@ -128,23 +119,16 @@ while running:
 
     ############################################
     if shiftThetaRange == True :
-        #print("Shifting Theta By "+str(ShiftThetaRangeBy))
-        #print("OldThetaRange : ")
-        #print(ThetaRange)
         ThetaRange = DQ(ThetaRange)
         ThetaRange.rotate(ShiftThetaRangeBy)
         ThetaRange = list(ThetaRange)
-        #print("NewThetaRange : ")
-        #print(ThetaRange)
+        
     if shiftPhiRange == True :
-        #print("Shifting Phi By "+str(ShiftPhiRangeBy))
-        #print("OldPhiRange : ")
-        #print(PhiRange)
         PhiRange = DQ(PhiRange)
         PhiRange.rotate(ShiftPhiRangeBy)
         PhiRange = list(PhiRange)
-        #print("NewPhiRange : ")
-        #print(PhiRange)
+        
+        
     # Now loop over X and Y Points on a Plane for a specific angle of rotation
     # along X axis and Y axis. We change/increment these angles at the end of the two
     # nested loop of theta and phi
@@ -152,57 +136,84 @@ while running:
     Z = AngleOfRotation_AroundAxis["Z"]
     sinX, cosX = sin(X), cos(X)
     sinZ, cosZ = sin(Z), cos(Z)
-    for itheta, theta in enumerate(ThetaRange):  # theta goes around the cross-sectional circle of a torus, from 0 to 2pi
-        costheta = cos(theta)
-        sintheta = sin(theta)
-        circlex = R2 + R1 * costheta
-        circley = R1 * sintheta
+    SinThetaRange = [sin(theta) for theta in ThetaRange]
+    CosThetaRange = [cos(theta) for theta in ThetaRange]
+    CircleXRange = [R2 + R1 * cosTheta for cosTheta in CosThetaRange]
+    CircleYRange = [R1 * sinTheta for sinTheta in SinThetaRange]
+    CircleZRange = [0.0 for i in range(len(CircleYRange))]
+    InitialCoordinates = {}
+    InitialCoordinates["x"] = CircleXRange
+    InitialCoordinates["y"] = CircleYRange
+    InitialCoordinates["z"] = CircleZRange
+    
+    
+    DonutCreatedFrom2DCircle = myfuncs.create_donut_from_circle(InitialCoordinates, PhiRange, "Y")
+    Rotated_Donut_AlongXAxis = myfuncs.rotate_donuts_along_xyz(DonutCreatedFrom2DCircle, X, "X", K2 = 0, calculate_ooz = False)
+    Rotated_Donut_AlongZAxis = myfuncs.rotate_donuts_along_xyz(Rotated_Donut_AlongXAxis, Z, "Z", K2 = K2, calculate_ooz = True)
 
-        for iphi, phi in enumerate(PhiRange):  # phi goes around the center of revolution of a torus, from 0 to 2pi
-            cosphi = cos(phi)
-            sinphi = sin(phi)
+    # x, y projection
+    XYPoints_ProjectedOnScreen = defaultdict(defaultdict)
+    Positions = defaultdict(defaultdict)
+    for phi in Rotated_Donut_AlongZAxis.keys():
+        XYPoints_ProjectedOnScreen[phi]["x"] = [int(screen_width / 2 + K1 * ooz * x) for x,ooz in
+                                                zip(Rotated_Donut_AlongZAxis[phi]["x"], Rotated_Donut_AlongZAxis[phi]["ooz"])]
+        XYPoints_ProjectedOnScreen[phi]["y"] = [int(screen_height / 2 - K1 * ooz * y) for y,ooz in
+                                                zip(Rotated_Donut_AlongZAxis[phi]["y"], Rotated_Donut_AlongZAxis[phi]["ooz"])]
 
-            # 3D (x, y, z) coordinates after rotation
-            x = circlex * (cosZ * cosphi + sinX * sinZ * sinphi) - circley * cosX * sinZ
-            y = circlex * (sinZ * cosphi - sinX * cosZ * sinphi) + circley * cosX * cosZ
-            z = K2 + cosX * circlex * sinphi + circley * sinX
-            ooz = 1 / z  # one over z
+        XYPoints_ProjectedOnScreen[phi]["position"] = [xp + screen_width * yp for xp, yp in
+                                                       zip(XYPoints_ProjectedOnScreen[phi]["x"], XYPoints_ProjectedOnScreen[phi]["y"])]
+        Positions[phi] = XYPoints_ProjectedOnScreen[phi]["position"]
 
-            # x, y projection
-            xp = int(screen_width / 2 + K1 * ooz * x)
-            yp = int(screen_height / 2 - K1 * ooz * y)
+    # luminance (L ranges from -sqrt(2) to sqrt(2))
+    Lumi = defaultdict(list)
+    lenchars = len(chars)
+    for phi in XYPoints_ProjectedOnScreen.keys() :
+        T1Vec = np.array([cos(phi) * costheta * sinZ for costheta in CosThetaRange])
+        T2Vec = np.array([cosX * costheta * sin(phi) for costheta in CosThetaRange])
+        T3Vec = np.array([sinX * sintheta for sintheta in SinThetaRange])
+        T4Vec = np.array([cosZ * (cosX * sintheta - costheta * sinZ * sin(phi)) for sintheta, costheta in zip(SinThetaRange, CosThetaRange)])
+        Lumi[phi] = [int(elem * 8) % lenchars for elem in T1Vec - T2Vec -T3Vec + T4Vec]
+        # we multiply by 8 to get luminance_index range 0..11 (8 * sqrt(2) = 11)
 
-            position = xp + screen_width * yp
-
-            # luminance (L ranges from -sqrt(2) to sqrt(2))
-            L = cosphi * costheta * sinZ - cosX * costheta * sinphi - sinX * sintheta + cosZ * (
-                        cosX * sintheta - costheta * sinZ * sinphi)
-
+    for phi in Positions.keys():
+        OOZsVec_ForFinalDonutConfig = Rotated_Donut_AlongZAxis[phi]["ooz"]
+        for ipos, pos in enumerate(Positions[phi]) :
+            
             if IgnoreBackSidePixels == True and ooz < zbuffer[position]:
                 if verboseLevel > 2 :
                     print("ooz less than front pixel z postion for theta index "+str(itheta)+" and phi index "+str(iphi))
                 continue
-            
-            zbuffer[position] = ooz  # larger ooz means the pixel is closer to the viewer than what's already plotted
-            luminance_index = int(L * 8)  # we multiply by 8 to get luminance_index range 0..11 (8 * sqrt(2) = 11)
-            #print("PrintLumi ", L, luminance_index)
-            lenchars = len(chars)
-            lumi_idx = luminance_index % lenchars
-            output[position] = chars[lumi_idx]
+            zbuffer[pos] = Rotated_Donut_AlongZAxis[phi]["ooz"][ipos]
+            # larger ooz means the pixel is closer to the viewer than what's already plotted
+            output[pos] = chars[Lumi[phi][ipos]]
 
-    for i in range(screen_height):
-        y_pixel += pixel_height
-        for j in range(screen_width):
-            x_pixel += pixel_width
-            text_display(output[k], x_pixel, y_pixel)
-            k += 1
-        x_pixel = 0
-    y_pixel = 0
-    k = 0
 
+    """
+    ##############################################################################
+    ip = PhiRange[0]
+    ks = XYPoints_ProjectedOnScreen[ip].keys()
+    for k in ks:
+        print(k)
+        v = XYPoints_ProjectedOnScreen[ip][k]
+        lv = len(v)
+        print(v)
+        print(lv)
+        print("****************************************************")
+    print(len(zbuffer))
+    #sys.exit()
+    ##############################################################################
+    """
+    myfuncs.paint_on_pygame_terminal_GiovanniCode9393Style(output, pixel_height, pixel_width, screen_height, screen_width, font, screen)
+    myfuncs.stringify(output, screen_height, screen_width, pixel_height, pixel_width)
+
+    #################################################################################
+    # Change X and Z angle for next round of drawing
     AngleOfRotation_AroundAxis["X"] += DeltaAngleOfRotation_AroundAxis["X"]
     AngleOfRotation_AroundAxis["Z"] += DeltaAngleOfRotation_AroundAxis["Z"]
-
+    #################################################################################
+    # Block for drawing on Pygame terminal
+    # Code from Giovanni (https://www.youtube.com/@giovannicode9393)
+    # Don't bother to change
     hue += 0.005
 
     if not paused:
@@ -216,3 +227,4 @@ while running:
                 running = False
             if event.key == pygame.K_SPACE:
                 paused = not paused
+    #######################################################

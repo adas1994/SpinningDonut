@@ -5,7 +5,7 @@ import pygame
 import colorsys
 from argparse import ArgumentParser as AP
 from collections import deque as DQ
-
+import numpy as np
 # Base Code was taken from https://github.com/codegiovanni/Donut_2.0/blob/main/donut.py
 
 parser = AP()
@@ -79,7 +79,7 @@ charOptions[0] = ".,-~:;=!*#$@"
 charOptions[1] = ". . . . . . . ."
 charOptions[2] = ".. .. .. .. .. "
 charOptions[3] = "... ... ... ..."
-
+charOptions[4] = "..............."
 
 chars = charOptions[CharOption]
 
@@ -101,7 +101,24 @@ def text_display(char, x, y):
     text_rect = text.get_rect(center=(x, y))
     screen.blit(text, text_rect)
 
-
+def stringify(output):
+    k, x_pixel, y_pixel = 0, 0, 0
+    s = ''
+    ns = np.empty([screen_height, screen_width], dtype=str)
+    for i in range(screen_height):
+        y_pixel += pixel_height
+        for j in range(screen_width):
+            x_pixel += pixel_width
+            #text_display(output[k], x_pixel, y_pixel)                                                                                                                    
+            ns[i, j] = output[k]
+            s += output[k]
+            k += 1
+        x_pixel = 0
+        s += '\n'
+    y_pixel = 0
+    k = 0
+    print(s)
+    
 k = 0
 
 paused = False
@@ -199,6 +216,7 @@ while running:
         x_pixel = 0
     y_pixel = 0
     k = 0
+    stringify(output)
 
     AngleOfRotation_AroundAxis["X"] += DeltaAngleOfRotation_AroundAxis["X"]
     AngleOfRotation_AroundAxis["Z"] += DeltaAngleOfRotation_AroundAxis["Z"]
